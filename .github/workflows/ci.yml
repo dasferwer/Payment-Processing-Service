@@ -68,7 +68,7 @@ jobs:
       - name: Проверить известные уязвимости зависимостей
         run: |
           uv export --frozen --format requirements-txt --no-dev --no-hashes --no-emit-project -o /tmp/payments-runtime.txt
-          uvx pip-audit -r /tmp/payments-runtime.txt --no-deps --disable-pip
+          uvx pip-audit==2.10.1 -r /tmp/payments-runtime.txt --no-deps --disable-pip
 
       - name: Запустить полный Compose и аварийные сценарии
         run: |
