@@ -1,0 +1,5 @@
+# Linux runner должен доставлять webhook временному получателю на хосте.
+services:
+  consumer:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

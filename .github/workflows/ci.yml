@@ -1,0 +1,87 @@
+name: Проверка проекта
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Тесты, миграции, Docker и безопасность
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      COMPOSE_FILE: compose.yaml:.github/compose.ci.yaml
+      UV_PYTHON: "3.12"
+    steps:
+      - name: Получить исходники
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Установить uv и Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.17"
+          python-version: "3.12"
+          enable-cache: false
+
+      - name: Подготовить демонстрационное окружение
+        run: |
+          cp .env.example .env
+          chmod 600 .env
+          uv sync --frozen
+          docker compose config -q
+
+      - name: Проверить стиль и форматирование
+        run: |
+          uv run ruff check app tests scripts migrations
+          uv run ruff format --check app tests scripts migrations
+          git diff --check
+
+      - name: Собрать образы и запустить PostgreSQL и RabbitMQ
+        run: |
+          docker compose build
+          docker compose up -d --wait --wait-timeout 180 postgres rabbitmq
+          docker compose exec -T rabbitmq rabbitmqctl add_vhost payments_test
+          docker compose exec -T rabbitmq rabbitmqctl set_permissions -p payments_test payments '.*' '.*' '.*'
+
+      - name: Запустить все тесты
+        run: uv run pytest -q
+
+      - name: Проверить миграции на пустой БД
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+          uv run alembic check
+
+      - name: Проверить известные уязвимости зависимостей
+        run: |
+          uv export --frozen --format requirements-txt --no-dev --no-hashes --no-emit-project -o /tmp/payments-runtime.txt
+          uvx pip-audit -r /tmp/payments-runtime.txt --no-deps --disable-pip
+
+      - name: Запустить полный Compose и аварийные сценарии
+        run: |
+          docker compose up -d --wait --wait-timeout 180
+          uv run python -m scripts.verify_compose
+          uv run python -m scripts.verify_broker_recreation
+
+      - name: Показать диагностику при ошибке
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --tail 100 api consumer postgres rabbitmq
+
+      - name: Удалить временное окружение
+        if: always()
+        run: docker compose down -v
