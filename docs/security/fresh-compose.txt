@@ -1,0 +1,13 @@
+payments|f|f|f
+
+No new upgrade operations detected.
+
+
+
+No new upgrade operations detected.
+
+Listing permissions for vhost "/" ...
+user	configure	write	read
+payments	^payments\.(new|dlq|dead|events)$	^payments\.(new|dlq|dead|events)$	^payments\.(new|dlq|dead|events)$
+
+PASS: fresh volumes, API authentication, limited DB role, migration cycle, Rabbit permissions

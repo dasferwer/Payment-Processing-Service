@@ -1,0 +1,46 @@
+ Container payment-processing-service-consumer-1 Killing
+ Container payment-processing-service-consumer-1 Killed
+ Container payment-processing-service-postgres-1 Waiting
+ Container payment-processing-service-rabbitmq-1 Waiting
+ Container payment-processing-service-rabbitmq-1 Healthy
+ Container payment-processing-service-postgres-1 Healthy
+ Container payment-processing-service-api-1 Waiting
+ Container payment-processing-service-api-1 Healthy
+ Container payment-processing-service-consumer-1 Starting
+ Container payment-processing-service-consumer-1 Started
+ Container payment-processing-service-consumer-1 Stopping
+ Container payment-processing-service-consumer-1 Stopped
+ Container payment-processing-service-rabbitmq-1 Waiting
+ Container payment-processing-service-postgres-1 Waiting
+ Container payment-processing-service-postgres-1 Healthy
+ Container payment-processing-service-rabbitmq-1 Healthy
+ Container payment-processing-service-api-1 Waiting
+ Container payment-processing-service-api-1 Healthy
+ Container payment-processing-service-consumer-1 Starting
+ Container payment-processing-service-consumer-1 Started
+ Container payment-processing-service-consumer-1 Killing
+ Container payment-processing-service-consumer-1 Killed
+ Container payment-processing-service-rabbitmq-1 Waiting
+ Container payment-processing-service-postgres-1 Waiting
+ Container payment-processing-service-rabbitmq-1 Healthy
+ Container payment-processing-service-postgres-1 Healthy
+ Container payment-processing-service-api-1 Waiting
+ Container payment-processing-service-api-1 Healthy
+ Container payment-processing-service-consumer-1 Starting
+ Container payment-processing-service-consumer-1 Started
+ Container payment-processing-service-rabbitmq-1 Stopping
+ Container payment-processing-service-rabbitmq-1 Stopped
+ Container payment-processing-service-rabbitmq-1 Starting
+ Container payment-processing-service-rabbitmq-1 Started
+ Container payment-processing-service-rabbitmq-1 Waiting
+ Container payment-processing-service-postgres-1 Waiting
+ Container payment-processing-service-postgres-1 Healthy
+ Container payment-processing-service-rabbitmq-1 Healthy
+ Container payment-processing-service-api-1 Waiting
+ Container payment-processing-service-api-1 Healthy
+PASS: /ok, webhook attempts=1
+PASS: /flaky, webhook attempts=2
+PASS: три ошибки webhook, сохранённый результат, реальное сообщение в DLQ
+PASS: SIGKILL после фиксации платежа, восстановление только webhook
+PASS: SIGKILL во время шлюза, откат и восстановление сообщения
+PASS: недоступность RabbitMQ, сохранение outbox и доставка после восстановления

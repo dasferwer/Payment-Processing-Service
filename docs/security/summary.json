@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-08",
+  "pytest_passed": 111,
+  "runtime_dependencies": 33,
+  "runtime_known_vulnerabilities": 0,
+  "images": [
+    {
+      "name": "payment-processing-service-api",
+      "id": "sha256:169f41c9475203828103b0197fd354626d396b66a2f90451c77023fc749ad756"
+    },
+    {
+      "name": "payment-processing-service-consumer",
+      "id": "sha256:a778136c66e60d2c1b1e4bd1f65a106ebe9355e40a9fb879720045bd10a624a7"
+    },
+    {
+      "name": "payment-processing-service-postgres:local",
+      "id": "sha256:2b294ab11cfaa0f705e50220a8cdeab89fa3d71b2123a881b38105d304fdf3a2"
+    },
+    {
+      "name": "payment-processing-service-rabbitmq:local",
+      "id": "sha256:1b7027a70f44f18e4f76a6907dceb92317b3d5dbfd8b789c7116d925144cfb2b"
+    }
+  ],
+  "trivy_known_vulnerabilities": {
+    "api": 0,
+    "postgres": 0,
+    "rabbitmq": 0
+  },
+  "bandit": {
+    "low": 2,
+    "reason": "B311: random используется только для эмуляции шлюза"
+  },
+  "trivy_version": "Version: 0.75.0\nVulnerability DB:\n  Version: 2\n  UpdatedAt: 2026-10-07 07:38:55.515026687 +0000 UTC\n  NextUpdate: 2026-10-08 07:38:55.515026457 +0000 UTC\n  DownloadedAt: 2026-10-08 11:14:20.749948 +0000 UTC"
+}

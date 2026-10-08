@@ -1,0 +1,99 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+name: payment-processing-service
+services:
+  postgres:
+    logging: *default-logging
+    mem_limit: 512m
+    image: payment-processing-service-postgres:local
+    build:
+      context: .
+      dockerfile: docker/Postgres.Dockerfile
+    environment:
+      POSTGRES_USER: payments_admin
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Задайте пароль администратора в .env}
+      APP_DB_PASSWORD: ${POSTGRES_PASSWORD:-payments-local}
+      POSTGRES_DB: payments
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-payments.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payments -d payments"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  rabbitmq:
+    logging: *default-logging
+    mem_limit: 512m
+    hostname: payments-rabbitmq
+    image: payment-processing-service-rabbitmq:local
+    build:
+      context: .
+      dockerfile: docker/Rabbitmq.Dockerfile
+    environment:
+      RABBITMQ_NODENAME: rabbit@payments-rabbitmq
+      RABBITMQ_DEFAULT_USER: payments
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-payments-local}
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-55672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-55673}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./docker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  api:
+    logging: *default-logging
+    mem_limit: 256m
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    build: .
+    environment: &app_env
+      DATABASE_URL: postgresql+asyncpg://payments:${POSTGRES_PASSWORD:-payments-local}@postgres:5432/payments
+      RABBITMQ_URL: amqp://payments:${RABBITMQ_PASSWORD:-payments-local}@rabbitmq:5672/
+      API_KEY: ${API_KEY:?Создайте .env по образцу .env.example}
+      RETRY_BASE_SECONDS: ${RETRY_BASE_SECONDS:-2}
+      ALLOWED_WEBHOOK_ORIGINS: '${ALLOWED_WEBHOOK_ORIGINS:-[]}'
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.api:app --host 0.0.0.0 --port 8000 --no-access-log --limit-concurrency 64"]
+    ports:
+      - "127.0.0.1:${API_PORT:-58000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,urllib.request; r=urllib.request.Request('http://localhost:8000/api/v1/payments/00000000-0000-0000-0000-000000000000',headers={'X-API-Key':os.environ['API_KEY']}); exec('try:\\n urllib.request.urlopen(r)\\nexcept urllib.error.HTTPError as e:\\n assert e.code == 404')"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+  consumer:
+    logging: *default-logging
+    mem_limit: 256m
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    build: .
+    environment: *app_env
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 20s
+volumes:
+  postgres_data:
+  rabbitmq_data:
